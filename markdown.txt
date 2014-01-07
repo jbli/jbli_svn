@@ -4,6 +4,10 @@ https://help.github.com/articles/github-flavored-markdown
 标准markdown文档
 http://daringfireball.net/projects/markdown/syntax
 
+jekyll
+http://jekyllbootstrap.com/
+http://blog.skydark.info/programming/2012/03/23/play-with-jekyll/
+
 
 ~~Mistaken text.~~
 
