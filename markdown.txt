@@ -1,6 +1,9 @@
 github官方flavored-markdown说明，它略微不同于标准markdown
 https://help.github.com/articles/github-flavored-markdown
 
+标准markdown文档
+http://daringfireball.net/projects/markdown/syntax
+
 
 ~~Mistaken text.~~
 
