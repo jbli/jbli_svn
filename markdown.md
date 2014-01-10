@@ -25,3 +25,30 @@
 ###课程链接
 - [第1课：博客项目设计](../lecture1/lecture1.md)
 - [第3课：模板用法讲解](../lecture3/lecture3.md)
+
+
+github官方flavored-markdown说明，它略微不同于标准markdown
+https://help.github.com/articles/github-flavored-markdown
+
+标准markdown文档
+http://daringfireball.net/projects/markdown/syntax
+
+jekyll
+http://jekyllbootstrap.com/
+http://blog.skydark.info/programming/2012/03/23/play-with-jekyll/
+
+
+~~Mistaken text.~~
+
+- [x] @mentions, #refs, [links](), **formatting**, and <del>tags</del> supported
+- [x] list syntax required (any unordered or ordered list supported)
+- [x] this is a complete item
+- [ ] this is an incomplete item
+
+Here's an example:
+
+```
+function test() {
+  console.log("notice the blank line before this function?");
+}
+```
