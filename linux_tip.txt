@@ -1,2 +1,0 @@
-1 查看某个目录下所有日志文件
-find . -name '*.log' | xargs tail -F
