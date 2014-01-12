@@ -1,3 +1,19 @@
+markdown使用文档
+==========================
+###编辑工具
+[mou](http://mouapp.com/):可视化编辑工具
+
+###jekyll
+[jekyll官网](http://jekyllrb.com/)
+```
+~ $ gem install jekyll
+~ $ jekyll new my-awesome-site
+~ $ cd my-awesome-site
+~/my-awesome-site $ jekyll serve
+```
+
+
+
 第2课：初窥 Web 开发
 ==========================
 
