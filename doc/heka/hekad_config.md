@@ -1,5 +1,5 @@
 hekad
-#########################
+===========================
 
 ### 配置文件
 - 全局配置
@@ -53,4 +53,22 @@ Url|uri = "%Url%"
 Status = "%StatusCode%"
 RequestSize|B = "%RequestSize%"
 Referer = "%Referer%"
+```
+
+### 注意事项
+- LogfileInput类型文件信息存储在/var/cache/hekad/seekjournals/目录下。
+
+
+### sandbox
+
+- 加载和卸载
+
+```
+./heka-sbmgr -action="load" -config=PlatformDevs.toml -script="example.lua" -scriptconfig="example.toml"
+./heka-sbmgr -action="unload" -config=PlatformDevs.toml -filtername=Example 
+```
+- 添加测试数据
+
+```
+./heka-inject   -heka="127.0.0.1:5565" -payload="testlua456"
 ```
