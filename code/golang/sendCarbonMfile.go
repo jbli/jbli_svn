@@ -16,6 +16,10 @@ import (
 	"strings"
 )
 
+type sendCB struct {
+	logger *log.Logger
+}
+
 type tomlConfig struct {
 	FileList  fileList
 	GolobConf golobConf
@@ -39,7 +43,7 @@ type FileMonitor struct {
 	seekJournalPath    string
 	inputfile          string
 	resumeFromStart    bool
-	logfile            string
+	carbonAddress      string
 	logger             *log.Logger
 }
 
@@ -167,16 +171,8 @@ func (fm *FileMonitor) recoverSeekPosition() (err error) {
 	return
 }
 
-func processBody(fm *FileMonitor) error {
+func (fm *FileMonitor) processBody() error {
 	var IsChanged bool
-
-	errlog, err := os.OpenFile(fm.logfile, os.O_RDWR|os.O_CREATE, 0)
-	if err != nil {
-		fm.logger.Printf("%s\r\n", err.Error())
-		os.Exit(-1)
-	}
-	defer errlog.Close()
-	fm.logger = log.New(errlog, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
 
 	f, err := os.Open(fm.inputfile)
 	defer f.Close()
@@ -211,14 +207,14 @@ func processBody(fm *FileMonitor) error {
 	}
 	strs := buffer.String()
 	fmt.Println(strs)
-	sendCarbon(strs)
+	sendCarbon(strs, fm.carbonAddress)
 	if IsChanged {
 		fm.updateJournal(1)
 	}
 	return nil
 }
 
-func initFileMonitor(inputfile, seekJournalPath, logfile string, resumeFromStart bool) *FileMonitor {
+func initFileMonitor(inputfile, seekJournalPath, carbonAddress string, logger *log.Logger, resumeFromStart bool) *FileMonitor {
 	return &FileMonitor{
 		seek:               0,
 		last_logline_start: 0,
@@ -226,12 +222,13 @@ func initFileMonitor(inputfile, seekJournalPath, logfile string, resumeFromStart
 		seekJournalPath:    seekJournalPath,
 		inputfile:          inputfile,
 		resumeFromStart:    resumeFromStart,
-		logfile:            logfile,
+		logger:             logger,
+		carbonAddress:      carbonAddress,
 	}
 
 }
 
-func getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string) ([]string, error) {
+func (scb *sendCB) getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string) ([]string, error) {
 	var ignoreList map[string]bool
 	ignoreList = make(map[string]bool)
 	for _, filename := range ignoreFiles {
@@ -241,7 +238,7 @@ func getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string
 	for _, filename := range scanbFiles {
 		finfo, err1 := os.Stat(filename)
 		if err1 != nil {
-			fmt.Println(filename, "is not exit")
+			scb.logger.Println(filename, "is not exit")
 			continue
 		}
 
@@ -249,7 +246,7 @@ func getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string
 			filepath.Walk(filename,
 				func(path string, info os.FileInfo, err error) error {
 					if err != nil {
-						fmt.Printf("ERROR: %v", err)
+						scb.logger.Printf("ERROR: %v", err)
 						return err
 					}
 					if info.IsDir() {
@@ -266,22 +263,23 @@ func getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string
 	}
 	return validList, nil
 }
-func getLastFilename(filename string) (string, error) {
+func (scb *sendCB) getLastFilename(filename string) (string, error) {
 	finfo, err := os.Stat(filename)
 	if err != nil {
-		fmt.Println(filename, "is not exit")
+		scb.logger.Println(filename, "is not exit")
 		return "", err
 	}
 	return finfo.Name(), nil
 }
-func getSeekJournalPath(seekJournalDir, inputfile string) string {
-	lastFilename, _ := getLastFilename(inputfile)
+func (scb *sendCB) getSeekJournalPath(seekJournalDir, inputfile string) string {
+	lastFilename, _ := scb.getLastFilename(inputfile)
 	filepath.Join(seekJournalDir, lastFilename)
 	return filepath.Join(seekJournalDir, lastFilename)
 }
 
 func main() {
 	var config tomlConfig
+
 	if _, err := toml.DecodeFile("c1.toml", &config); err != nil {
 		fmt.Println(err)
 		return
@@ -293,12 +291,20 @@ func main() {
 	seekJournalDir := config.GolobConf.SeekJournalDir
 	logfile := config.GolobConf.Logfile
 	resumeFromStart := config.GolobConf.ResumeFromStart
+	carbonAddress := config.GolobConf.CarbonAddress
 	fmt.Println(seekJournalDir)
-	/*
-	   seekJournalDir := "/tmp/seekJournal"
-	   logfile := "/tmp/errlog"
-	   resumeFromStart := true
-	*/
+
+	errlog, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE, 0)
+	if err != nil {
+		fmt.Printf("%s\r\n", err.Error())
+		os.Exit(-1)
+	}
+	defer errlog.Close()
+	logger := log.New(errlog, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
+
+	scb := &sendCB{
+		logger: logger,
+	}
 	if dirInfo, err := os.Stat(seekJournalDir); err != nil {
 		if os.IsNotExist(err) {
 			if err = os.MkdirAll(seekJournalDir, 0775); err != nil {
@@ -317,16 +323,17 @@ func main() {
 	}
 
 	scanList := make([]string, 0, 10)
-	vlist, _ := getValidList(config.FileList.ScanbFiles, config.FileList.IgnoreFiles, scanList, "twsp")
+	vlist, _ := scb.getValidList(config.FileList.ScanbFiles, config.FileList.IgnoreFiles, scanList, "twsp")
 	for _, filename := range vlist {
-		seekJournalPath := getSeekJournalPath(seekJournalDir, filename)
-		fm := initFileMonitor(filename, seekJournalPath, logfile, resumeFromStart)
-		processBody(fm)
-		fmt.Println(filename)
+		seekJournalPath := scb.getSeekJournalPath(seekJournalDir, filename)
+		fm := initFileMonitor(filename, seekJournalPath, carbonAddress, scb.logger, resumeFromStart)
+		fm.processBody()
+		//fmt.Println(filename)
 	}
+	return
 }
 
-func sendCarbon(str string) {
+func sendCarbon(str string, carbonAddress string) {
 	var e error
 	lines := strings.Split(strings.Trim(str, " \n"), "\n")
 
@@ -353,7 +360,7 @@ func sendCarbon(str string) {
 	}
 	clean_statmetrics = clean_statmetrics[:index]
 
-	conn, err := net.Dial("tcp", "192.168.1.46:2003")
+	conn, err := net.Dial("tcp", carbonAddress)
 	if err != nil {
 		fmt.Errorf("Dial failed: %s",
 			err.Error())
