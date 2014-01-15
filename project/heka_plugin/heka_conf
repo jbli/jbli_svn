@@ -1,0 +1,20 @@
+[aabb]
+type = "LogfileInput"
+logfile = "/tmp/aabb.log"
+#decoder = "apache_transform_decoder"
+logger = "apache_test"
+
+[apache_transform_decoder]
+type = "PayloadRegexDecoder"
+match_regex = '^(?P<RemoteIP>\S+) \S+ \S+ \[(?P<Timestamp>[^\]]+)\] "(?P<Method>[A-Z]+) (?P<Url>[^\s^\?]+)[^"]*" (?P<StatusCode>\d+) (?P<RequestSize>\d+) "(?P<Referer>[^\s^\?]+)[^"]*"' 
+timestamp_layout = "02/Jan/2006:15:04:05 +0800"
+
+[apache_transform_decoder.message_fields]
+Type = "ApacheLogfile"
+Logger = "apache"
+RemoteIP = "%RemoteIP%"
+Timestamp = "%Timestamp%"
+Url|uri = "%Url%"
+Status = "%StatusCode%"
+RequestSize|B = "%RequestSize%"
+Referer = "%Referer%"

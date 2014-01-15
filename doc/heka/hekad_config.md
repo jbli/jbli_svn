@@ -1,5 +1,25 @@
 hekad
 ===========================
+###安装
+- apt-get install cmake mercurial  build-essential
+- go 1.1
+
+```
+export GOROOT=/root/go  
+export PATH=$PATH:$GOROOT/bin
+export GOPATH=/root/golibs  
+```
+- git clone https://github.com/mozilla-services/heka.git
+- 在/data/heka/cmake/externals.cmake 中加入自定义的插件地址
+
+```
+if (INCLUDE_MOZSVC)
+    add_external_plugin(git https://github.com/mozilla-services/heka-mozsvc-plugins 6fe574dbd32a21f5d5583608a9d2339925edd2a7)
+    add_external_plugin(git https://github.com/jbli/heka_plugin 3338501c72d599858262e867d46abca9a6ccbd62)
+endif()
+```
+
+- cd heka && sh build.sh
 
 ### 配置文件
 - 全局配置
@@ -28,6 +48,17 @@ logger = "apache_test"
 type = "FileOutput"
 message_matcher = "Type != 'ablogfile'"
 path = "/tmp/access_xueqiu.log"
+```
+
+- nsq
+
+```
+[NsqInput_1]
+type = "NsqInput"
+address = "192.168.1.44:4161"
+topic = "test"
+channel = "test"
+decoder = "ProtobufDecoder"
 ```
 
 - nginx日志过滤
