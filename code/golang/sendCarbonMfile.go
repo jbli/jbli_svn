@@ -6,22 +6,40 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"io"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+type tomlConfig struct {
+	FileList  fileList
+	GolobConf golobConf
+}
+
+type golobConf struct {
+	CarbonAddress   string
+	SeekJournalDir  string
+	Logfile         string
+	ResumeFromStart bool
+}
+type fileList struct {
+	IgnoreFiles []string
+	ScanbFiles  []string
+}
 
 type FileMonitor struct {
 	seek               int64
 	last_logline_start int64
 	last_logline       string
 	seekJournalPath    string
-	logfile            string
+	inputfile          string
 	resumeFromStart    bool
-	errlog             string
+	logfile            string
 	logger             *log.Logger
 }
 
@@ -87,7 +105,7 @@ func (fm *FileMonitor) UnmarshalJSON(data []byte) (err error) {
 
 	//fmt.Println("seek_pos:", seek_pos, "last_start:", last_start, "last_len", last_len, "last_hash", last_hash)
 	var fd *os.File
-	if fd, err = os.Open(fm.logfile); err != nil {
+	if fd, err = os.Open(fm.inputfile); err != nil {
 		return
 	}
 	defer fd.Close()
@@ -126,7 +144,7 @@ func (fm *FileMonitor) recoverSeekPosition() (err error) {
 
 	var seekJournal *os.File
 	if seekJournal, err = os.Open(fm.seekJournalPath); err != nil {
-		// The logfile doesn't exist, nothing special to do
+		// The inputfile doesn't exist, nothing special to do
 		if os.IsNotExist(err) {
 			// file doesn't exist, but that's ok, not a real error
 			return nil
@@ -149,20 +167,10 @@ func (fm *FileMonitor) recoverSeekPosition() (err error) {
 	return
 }
 
-func main() {
-	var fm *FileMonitor
+func processBody(fm *FileMonitor) error {
 	var IsChanged bool
 
-	fm = &FileMonitor{
-		seek:               0,
-		last_logline_start: 0,
-		last_logline:       "",
-		seekJournalPath:    "/tmp/seekJournal/vnstat.log",
-		logfile:            "/data/tools/log/vnstat.log",
-		resumeFromStart:    true,
-		errlog:             "/tmp/errlog",
-	}
-	errlog, err := os.OpenFile(fm.errlog, os.O_RDWR|os.O_CREATE, 0)
+	errlog, err := os.OpenFile(fm.logfile, os.O_RDWR|os.O_CREATE, 0)
 	if err != nil {
 		fm.logger.Printf("%s\r\n", err.Error())
 		os.Exit(-1)
@@ -170,10 +178,7 @@ func main() {
 	defer errlog.Close()
 	fm.logger = log.New(errlog, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
 
-	//hostname,_ := getHostname()
-	//fmt.Println("host:",hostname)
-
-	f, err := os.Open(fm.logfile)
+	f, err := os.Open(fm.inputfile)
 	defer f.Close()
 
 	IsChanged = false
@@ -209,6 +214,115 @@ func main() {
 	sendCarbon(strs)
 	if IsChanged {
 		fm.updateJournal(1)
+	}
+	return nil
+}
+
+func initFileMonitor(inputfile, seekJournalPath, logfile string, resumeFromStart bool) *FileMonitor {
+	return &FileMonitor{
+		seek:               0,
+		last_logline_start: 0,
+		last_logline:       "",
+		seekJournalPath:    seekJournalPath,
+		inputfile:          inputfile,
+		resumeFromStart:    resumeFromStart,
+		logfile:            logfile,
+	}
+
+}
+
+func getValidList(scanbFiles, ignoreFiles, validList []string, suffix_str string) ([]string, error) {
+	var ignoreList map[string]bool
+	ignoreList = make(map[string]bool)
+	for _, filename := range ignoreFiles {
+		ignoreList[filename] = true
+	}
+
+	for _, filename := range scanbFiles {
+		finfo, err1 := os.Stat(filename)
+		if err1 != nil {
+			fmt.Println(filename, "is not exit")
+			continue
+		}
+
+		if finfo.IsDir() {
+			filepath.Walk(filename,
+				func(path string, info os.FileInfo, err error) error {
+					if err != nil {
+						fmt.Printf("ERROR: %v", err)
+						return err
+					}
+					if info.IsDir() {
+						return nil
+					} else if !ignoreList[path] && strings.HasSuffix(filename, suffix_str) {
+						validList = append(validList, path)
+					}
+					return nil
+				})
+		} else if !ignoreList[filename] && strings.HasSuffix(filename, suffix_str) {
+			//fmt.Println(finfo.Name())
+			validList = append(validList, filename)
+		}
+	}
+	return validList, nil
+}
+func getLastFilename(filename string) (string, error) {
+	finfo, err := os.Stat(filename)
+	if err != nil {
+		fmt.Println(filename, "is not exit")
+		return "", err
+	}
+	return finfo.Name(), nil
+}
+func getSeekJournalPath(seekJournalDir, inputfile string) string {
+	lastFilename, _ := getLastFilename(inputfile)
+	filepath.Join(seekJournalDir, lastFilename)
+	return filepath.Join(seekJournalDir, lastFilename)
+}
+
+func main() {
+	var config tomlConfig
+	if _, err := toml.DecodeFile("c1.toml", &config); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("scanbFiles: %v\n", config.FileList.ScanbFiles)
+	fmt.Printf("ignoreFiles: %v\n", config.FileList.IgnoreFiles)
+
+	seekJournalDir := config.GolobConf.SeekJournalDir
+	logfile := config.GolobConf.Logfile
+	resumeFromStart := config.GolobConf.ResumeFromStart
+	fmt.Println(seekJournalDir)
+	/*
+	   seekJournalDir := "/tmp/seekJournal"
+	   logfile := "/tmp/errlog"
+	   resumeFromStart := true
+	*/
+	if dirInfo, err := os.Stat(seekJournalDir); err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(seekJournalDir, 0775); err != nil {
+				fmt.Println(fmt.Sprintf("Error creating seek journal folder %s: %s",
+					seekJournalDir, err))
+				return
+			}
+		} else {
+			fmt.Println(fmt.Sprintf("Error accessing seek journal folder %s: %s",
+				seekJournalDir, err))
+			return
+		}
+	} else if !dirInfo.IsDir() {
+		fmt.Println("%s doesn't appear to be a directory", seekJournalDir)
+		return
+	}
+
+	scanList := make([]string, 0, 10)
+	vlist, _ := getValidList(config.FileList.ScanbFiles, config.FileList.IgnoreFiles, scanList, "twsp")
+	for _, filename := range vlist {
+		seekJournalPath := getSeekJournalPath(seekJournalDir, filename)
+		fm := initFileMonitor(filename, seekJournalPath, logfile, resumeFromStart)
+		processBody(fm)
+		fmt.Println(filename)
 	}
 }
 

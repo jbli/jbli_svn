@@ -1,0 +1,9 @@
+[golobConf]
+carbonAddress = "192.168.1.46:2003"
+seekJournalDir = "/tmp/seekJournal"
+logfile = "/tmp/errlog"
+resumeFromStart = true
+
+[fileList]
+IgnoreFiles = ["/tmp/vnstat.twsp"]
+ScanbFiles = ["/tmp/vnstat1.twsp", "/tmp/vnstat.twsp"]
