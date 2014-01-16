@@ -27,6 +27,13 @@ tcpdump 抓包
 ```
 netstat -n 2>/dev/null | awk '/^tcp/ {++state[$NF]} END {for(key in state) print key,"\t",state[key]}'
 ```
+或者
+```
+ss state ESTABLISHED|wc -l
+ss state TIME-WAIT|wc -l
+ss -t -a -o excl ESTABLISHED |grep -v TIME-WAIT
+ss state ESTABLISHED sport eq :80 and not dst 127.0.0.1
+```
 得到crontab
 crontab -l|awk '{print $7}'|awk -F')' '{ if($1~/home/) print $1,"\\"}'
 
@@ -58,6 +65,10 @@ cd .. && chmod 700 .ssh && chmod 600 .ssh/authorized_keys && chown -R $username:
 ```
 find . -name '*.log' | xargs tail -F
 ```
+awk传参
+```
+echo | vnstat -tr 5 -i eth1 |egrep 'rx|tx'|awk  '{print tm,$1,$2,$3,$4,$5,tm1}' tm="$now" tm1="$now1"
+```
 
 ####测试
 window 网络
@@ -84,3 +95,4 @@ nginx 过滤请求
 
 ###  vim
 取消自动缩进 :set noautoindent
+
