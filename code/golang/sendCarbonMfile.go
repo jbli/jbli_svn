@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"io"
@@ -278,9 +279,11 @@ func (scb *sendCB) getSeekJournalPath(seekJournalDir, inputfile string) string {
 }
 
 func main() {
+	confFile := flag.String("f", "/etc/sendcarbon.toml", "configure file flag   -f  /etc/sendcarbon.toml")
+	flag.Parse()
 	var config tomlConfig
 
-	if _, err := toml.DecodeFile("c1.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(*confFile, &config); err != nil {
 		fmt.Println(err)
 		return
 	}
