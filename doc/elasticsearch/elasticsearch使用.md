@@ -370,8 +370,201 @@ consistency=one/quorum/all
 
 --------------------
 ##update api
+update 是先get document,运行script,再返回结果。该操作完全是reindex document,但它比get delete get减少网络开销和version 冲突。<br/>
+例子：
 
+```
+curl -XPUT localhost:9200/test/type1/1 -d '{
+    "counter" : 1,
+    "tags" : ["red"]
+}'
+```
+更新counter
 
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "script" : "ctx._source.counter += count",
+    "params" : {
+        "count" : 4
+    }
+}'
+```
+查看结果
+
+```
+curl -XGET 'localhost:9200/test/type1/1?pretty' 
+```
+如下所示
+
+```
+{
+  "_index" : "test",
+  "_type" : "type1",
+  "_id" : "1",
+  "_version" : 2,
+  "found" : true, "_source" : {"counter":5,"tags":["red"]}
+}
+```
+为数组中加一个元素
+
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "script" : "ctx._source.tags += tag",
+    "params" : {
+        "tag" : "blue"
+    }
+}'
+```
+添加一个新参数
+
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "script" : "ctx._source.remove(\"text\")"
+}'
+```
+三元操作
+
+```
+// Will update
+ctx._source.tags.contains(tag) ? (ctx.op = \"none\") : ctx._source.tags += tag
+// Also works
+if (ctx._source.tags.contains(tag)) { ctx.op = \"none\" } else { ctx._source.tags += tag }
+
+```
+也支持传入部分key/valuve,和原来的融合在一起
+
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "doc" : {
+        "name" : "new_name"
+    }
+}'
+```
+upsert 可以检查指定字段是否已存在，如果不存在，赋一个初值。
+
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "script" : "ctx._source.counter += count",
+    "params" : {
+        "count" : 4
+    },
+    "upsert" : {
+        "counter" : 1
+    }
+}'
+```
+
+doc_as_upsert也可以先判断是否存在，如果不存在更新。
+
+```
+curl -XPOST 'localhost:9200/test/type1/1/_update' -d '{
+    "doc" : {
+        "name" : "new_name"
+    },
+    "doc_as_upsert" : true
+}'
+```
+------------------------
+##multi get api
+形式一：
+
+```
+curl 'localhost:9200/_mget' -d '{
+    "docs" : [
+        {
+            "_index" : "test",
+            "_type" : "type",
+            "_id" : "1"
+        },
+        {
+            "_index" : "test",
+            "_type" : "type",
+            "_id" : "2"
+        }
+    ]
+}'
+```
+形式二：
+
+```
+curl 'localhost:9200/test/_mget' -d '{
+    "docs" : [
+        {
+            "_type" : "type",
+            "_id" : "1"
+        },
+        {
+            "_type" : "type",
+            "_id" : "2"
+        }
+    ]
+}'
+```
+形式三:
+
+```
+curl 'localhost:9200/test/type/_mget' -d '{
+    "docs" : [
+        {
+            "_id" : "1"
+        },
+        {
+            "_id" : "2"
+        }
+    ]
+}'
+```
+可以写为
+
+```
+curl 'localhost:9200/test/type/_mget' -d '{
+    "ids" : ["1", "2"]
+}'
+```
+
+###source filtering
+```
+curl 'localhost:9200/_mget' -d '{
+    "docs" : [
+        {
+            "_index" : "test",
+            "_type" : "type",
+            "_id" : "1",
+            "_source" : false
+        },
+        {
+            "_index" : "test",
+            "_type" : "type",
+            "_id" : "2",
+            "_source" : ["field3", "field4"]
+        },
+        {
+            "_index" : "test",
+            "_type" : "type",
+            "_id" : "3",
+            "_source" : {
+                "include": ["user"],
+                "_exclude": ["user.location"]
+            }
+        }
+    ]
+}'
+```
+
+--------
+##bulk api
+操作对象是index,可以批量地create delete和update在一次API调用。
+
+##delete by query api
+```
+$ curl -XDELETE 'http://localhost:9200/twitter/tweet/_query?q=user:kimchy'
+
+$ curl -XDELETE 'http://localhost:9200/twitter/tweet/_query' -d '{
+    "term" : { "user" : "kimchy" }
+}
+'
+$ curl -XDELETE 'http://localhost:9200/kimchy,elasticsearch/_query?q=tag:wow'
+```
 
 1.0与0.9版本变化
 ============================
