@@ -269,6 +269,108 @@ url -XPOST 'http://localhost:9200/twitter/tweet?routing=kimchy' -d '{
 }'
 ```
 
+###write consistency
+通过action.write_consistency设置写几个分片后，返回成功。可以设为one, quorum,all. 其中默认值为quorum(>replicas/2+1)
+
+###asynchronous repliacation
+默认当all shards都被复制后才返回。 可以通过设置replication为async，当primary shard操作成功后就返回。
+
+###refresh
+refresh true， 会影响性能
+
+###timeout
+timeout: 操作等待返回的时间，默认是1m.
+
+```
+curl -XPUT 'http://localhost:9200/twitter/tweet/1?timeout=5m' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
+
+-----------------------------
+##get api
+
+```
+curl -XGET 'http://localhost:9200/twitter/tweet/1'
+````
+
+###realtime
+默认get API是实时的，不受刷新频率的影响。可以通过realtime=false或全局变量action.get.realtime＝false ，取到非实时数据，数据实时性受刷新频率控制
+
+###optional type
+_type=_all  在所有type中获取第一个匹配id的文档
+
+###source filtering
+默认返回整个_source内容，可以设置_source=false不返回_source内容
+
+```
+curl -XGET 'http://localhost:9200/twitter/tweet/1?_source=false'
+```
+
+可以通过 _source_include & _source_exclude 来过滤，如
+
+```
+curl -XGET 'http://localhost:9200/twitter/tweet/1?_source_include=*.id&_source_exclude=entities'
+```
+如果只有include,可以直接使用
+
+```
+curl -XGET 'http://localhost:9200/twitter/tweet/1?_source=message,*ser'
+```
+###fields
+被 source filtering取代
+
+###getging _source directly
+
+```
+curl -XGET 'http://localhost:9200/twitter/tweet/1/_source'
+```
+
+或
+
+````
+curl -XGET 'http://localhost:9200/twitter/tweet/1/_source?_source_include=*.id&_source_exclude=entities'
+````
+
+###routing
+?routing=kimchy
+
+###preference
+preference 参数可以如下值：
+
+- _primary 仅从primary shards查询
+- _local 尽可能从本地取值
+-  自定义字符串 作用类同web session id或user name
+
+###refresh
+###distributed
+
+------------------------
+##delete api
+
+```
+curl -XDELETE 'http://localhost:9200/twitter/tweet/1'
+```
+
+###versioning
+###routing
+###parent
+###automatic index creation
+delete 操作会自动创建index和type，如果它们原来不存在 ？？？？
+###distributed
+根据hash得到shard id,先删primary shard,再同步到整个id group
+###replication type
+replication=async/sync  是删除完primary shard上内容直接返回，再异步删整个id group,还是删完整个id group再返回。
+###write consistency
+consistency=one/quorum/all
+###frefresh
+###timeout
+
+--------------------
+##update api
+
 
 
 1.0与0.9版本变化
