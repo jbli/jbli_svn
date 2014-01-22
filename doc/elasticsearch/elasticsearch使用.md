@@ -100,6 +100,174 @@ GET /_nodes/stats/transport,http
 - 人可读如 1h, 1K, 机器可读如 36000,1024等，机器可读主要用于监控等场合
 - ?human=false/true 控制输出形式，默认是false
 
+###flat settings
+- flat_settings is true
+
+```
+{
+  "persistent" : { },
+  "transient" : {
+    "discovery.zen.minimum_master_nodes" : "1"
+  }
+}
+```
+- flat_settings is flase,默认值为false
+
+```
+{
+  "persistent" : { },
+  "transient" : {
+    "discovery" : {
+      "zen" : {
+        "minimum_master_nodes" : "1"
+      }
+    }
+  }
+}
+```
+
+###parameters
+Rest parameters 转换为url parameters时，用下划线“_”
+
+###boolean values
+false,0,no,off代表false, 其余都代表true
+
+###number values
+支持number作为string类型
+
+###time units
+时间段，像timeout参数，支持2d for 2 days
+
+- y  Year
+- M  Month
+- W  Week
+- d   Day
+- h   Hours
+- m   Minute
+- s   Second
+
+###distance units
+###fuzziness
+支持模糊查询<br/>
+使用 fuzziness参数，对内容查询，依赖被查询的field类型，其中field类型有 string numeric,date,ipv4
+
+###result casing
+当参数case=camelCase，返回camel casing,否则返回下划线风格
+
+###jsonp
+
+###request body in query string
+不接请求体为non-POST的请求，但是能传递请求体做为source query string parameter代替。
+
+##document apis
+主要描述CRUD APIs<br/>
+Single document APIs
+
+- Index API
+- Get API
+- Delete API
+- Update API
+
+Multi-document APIs
+
+- Multi Get API
+- Bulk API
+- Bulk UDP API
+- Delete By Query API
+
+注意：所有CRUD APIs都是single-index, index parameter只接受single index name
+
+###Index API
+对文档增加或更新一个索引， index:"twitter";type:"tweet";id:"1"
+
+```
+curl -XPUT 'http://localhost:9200/twitter/tweet/1' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
+返回结果
+
+```
+{
+    "_index" : "twitter",
+    "_type" : "tweet",
+    "_id" : "1",
+    "_version" : 1,
+    "created" : true
+}
+```
+
+###automatic index creation
+index、type如果不存在，会自动创建。<br/>
+可以通过action.auto_create_index和index.mapper.dynamic设为false，来禁用自动创建。<br/>
+action.auto_create_index也可以使用`+aaa*,-bbb*,+ccc*,-*`,其中+表示允许，-表示禁止.
+
+action.auto_create_index和index.mapper.dynamic设置可以在配置文件，可以针对特定的index.如：
+
+```
+curl -XPOST 'http://localhost:9200/twitter' -d '{
+  "settings": {
+    "index": {
+      "mapping.allow_type_wrapper": true
+    }
+  }
+}'
+```
+返回结果:
+
+```
+{"acknowledged":true}
+```
+###version
+文档每次更新操作都会更新版本号。也可以指定更新版本号
+
+```
+curl -XPUT 'localhost:9200/twitter/tweet/1?version=2' -d '{
+    "message" : "elasticsearch now has versioning support, double cool!"
+}'
+```
+###operation type
+op_type 可以用于创建操作，如果索引已存在，则返回失败。
+
+```
+curl -XPUT 'http://localhost:9200/twitter/tweet/1?op_type=create' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
+或者写成如下形式:
+
+```
+curl -XPUT 'http://localhost:9200/twitter/tweet/1/_create' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
+###automatic id generation
+
+```
+curl -XPOST 'http://localhost:9200/twitter/tweet/' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
+注意要使用 "POST" 代替 “PUT”
+
+### routing
+默认基于document’s id 哈希分片存储。 可以使用routing来指定一个值，根据该值来哈希。注意， 如果存储是基于该值存储，那么读取也指定该routing,否则读不到值。
+
+```
+url -XPOST 'http://localhost:9200/twitter/tweet?routing=kimchy' -d '{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+```
 
 
 
