@@ -574,9 +574,9 @@ $ curl -XDELETE 'http://localhost:9200/kimchy,elasticsearch/_query?q=tag:wow'
 - _boost移除，用function_score 代替
 
 
-
-
-===========================================
+其它
+============================
+- [elasticsearch下数据可视化](http://www.elasticsearch.org/blog/data-visualization-with-elasticsearch-and-protovis/)
 
 - 加入开机自启动
 
