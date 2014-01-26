@@ -56,6 +56,12 @@ path.plugins: /data/elasticsearch/plugins
 node.master 该节点是否可以被选举为master
 node.data   该节点是否可以存储数据
 
+设置udp监听端口
+
+```
+bulk.udp.enabled: true
+bulk.udp.port: 9700
+```
 
 启动
 ===========================
