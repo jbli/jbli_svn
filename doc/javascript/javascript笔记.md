@@ -254,7 +254,49 @@ alert(person1.name); //"ccdd" from instance
 alert(person2.name); //"aabb" from prototpye
 
 ```
-原型存在的问题，修改一个实例的原型的值 。
+原型存在的问题，两个对象都使用某一原型，修改一个实例的原型的值，另一个实例的值也会改变。
+
+```
+function Person(){}
+Person.prototype = {
+  friends: ["aabb", "ccdd"],
+  sayName: function(){
+    alert(this.name);
+  }
+};
+
+var person1 = new Person();
+var person2 = new Person();
+
+person1.friends.push("eeff");
+
+alert(person1.friends); //aabb, ccdd, eeff
+alert(person2.friends); //aabb, ccdd, eeff
+```
+解决办法，像数组之类不打算在几个实例共享。可以组合原型和构造方法
+
+```
+function Person(name, age, job){
+  this.name = name;
+  this.age = age;
+  this.job = job;
+  this.friends = ["aabb","ccdd"];
+}
+Person.prototype = {
+  constructor: Person,
+  sayName: function(){
+    alert(this.name);
+  }
+};
+
+var person1 = new Person("a", 29, "software");
+var person2 = new Person("b", 29, "coctor");
+person1.friends.push("eeff");
+
+alert(person1.friends); //aabb, ccdd, eeff
+alert(person2.friends); //aabb, ccdd
+
+``` 
 
 
 #输出
