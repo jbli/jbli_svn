@@ -5,7 +5,7 @@ SPDY 3.1翻译
 ## Overview(概述)
 One of the bottlenecks of HTTP implementations is that HTTP relies on multiple connections for concurrency. This causes several problems, including additional round trips for connection setup, slow-start delays, and connection rationing by the client, where it tries to avoid opening too many connections to any single server. HTTP pipelining helps some, but only achieves partial multiplexing. In addition, pipelining has proven non-deployable in existing browsers due to intermediary interference.
 
-HTTP应用的一个瓶颈就是，其必须依赖多种关联反应的同步性。这个会带来很多问题，包括额外的往返关系的建立，启动慢带来的延迟，当用户想避免打开针对某个服务器过多的访问可能需要涉及这些访问连接的配给问题。HTTP应用流水线设计技术可以解决部分问题，但是只能实现部分的多分路复用。另外，流水线设计技术已经证实，因为中介的干预，在现有浏览器的应用中是无法开展的。
+HTTP的一个瓶颈，是需要通过建立多个连接来实现并发。这个会带来很多问题，包括为连接的建立的额外开支，启动慢带来的延迟，当用户想避免打开针对某个服务器过多的访问可能需要涉及这些访问连接的配给问题。HTTP应用流水线设计技术可以解决部分问题，但是只能实现部分的多分路复用。另外，流水线设计技术已经证实，因为中介的干预，在现有浏览器的应用中是无法开展的。
 
 SPDY adds a framing layer for multiplexing multiple, concurrent streams across a single TCP connection (or any reliable transport stream). The framing layer is optimized for HTTP-like request-response streams, such that applications which run over HTTP today can work over SPDY with little or no change on behalf of the web application writer.
 
@@ -26,3 +26,10 @@ SPDP相对于HTTP提供了四个改进：
 SPDY attempts to preserve the existing semantics of HTTP. All features such as cookies, ETags, Vary headers, Content-Encoding negotiations, etc work as they do with HTTP; SPDY only replaces the way the data is written to the network.
 
 SPDY试图保留现有HTTP的语法。所有的特点，比如cookies，ETags，Vary headers，Content-Encoding negotiations等等都和HTTP下一样，SPDY只是改变了数据被写到网络中的方式。
+
+##SPDY Framing Layer
+###Session(Connections)
+SPDY framing layer是运行在tcp之上。 client是tcp连接的发起者，SPDY建立的连接是持久连接。</br>
+从性能角度考虑，client不主动关闭连接，除非用户不再使用该连接。 server也尽可能长地保留连接，只在必要时中断空闲连接。任何一端如果要关闭连接，在关闭之前，首先必须发一个 GOAWAY frame,来检查请求是否已经完成。
+
+###Framing
