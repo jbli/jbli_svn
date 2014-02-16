@@ -3,14 +3,15 @@
 设置环境变量
 
 ```
-export GOPATH=/Users/lijinbang/mywork/godir201402/golibs
-export PATH=$PATH:/Users/lijinbang/mywork/godir201402/golibs/bin
+export GOROOT=/data/go-dev-201402/go  
+export GOPATH=/data/go-dev-201402/golibs 
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 ```
 下载beego和bee
 
 ```
-git get github.com/astaxie/beego
-git get github.com/astaxie/beego/bee
+go get github.com/astaxie/beego
+go get github.com/beego/bee
 ```
 创建一个简单示例
 
@@ -144,6 +145,19 @@ Nested template test
 
 ```
 {{template "nested"}}
+```
+
+
+orm
+==========
+安装
+
+```
+sudo apt-get install pkg-config
+sudo apt-get install sqlite3  
+sudo apt-get install libsqlite3-dev
+
+go get github.com/mattn/go-sqlite3
 ```
 
 

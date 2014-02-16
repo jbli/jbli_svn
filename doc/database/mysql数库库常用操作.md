@@ -86,3 +86,8 @@ mysql -u root -p123456 -e 'SHOW /*!50000 GLOBAL */ STATUS LIKE "Binlog_cache%"'
 mysql -u root -p123456 -e 'SHOW /*!50000 GLOBAL */ STATUS LIKE "Innodb_log_waits'
 
 ```
+
+资料
+============
+
+[MySQL监控应该知道的九件事](http://linux.llog.cn/?p=199)
